@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Team Techverse</string>
+    <string name="title_activity_main">Team Techverse</string>
+    <string name="package_name">com.techverse.app</string>
+    <string name="custom_url_scheme">com.techverse.app</string>
+</resources>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "356930010600",
+    "project_id": "team-techverse",
+    "storage_bucket": "team-techverse.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:356930010600:android:d2143b289f8d38aceeb85d",
+        "android_client_info": {
+          "package_name": "com.techverse.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPuXODQlPUhPoDgrs2lrjOB5QAu_CjXJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

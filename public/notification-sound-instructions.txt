@@ -1,0 +1,31 @@
+NOTIFICATION SOUND SETUP
+========================
+
+To add a notification sound to your app:
+
+1. Download a notification sound file (MP3 format recommended)
+   - Keep it short (1-2 seconds)
+   - Similar to WhatsApp notification sound
+   - You can find free notification sounds at:
+     * https://notificationsounds.com/
+     * https://www.zedge.net/
+     * https://freesound.org/
+
+2. Rename your sound file to: notification-sound.mp3
+
+3. Replace the placeholder file at: public/notification-sound.mp3
+
+4. Rebuild your project:
+   npm run build
+   
+5. For APK: Sync Capacitor
+   npx cap sync android
+
+RECOMMENDED SOUND CHARACTERISTICS:
+- Format: MP3
+- Duration: 1-2 seconds
+- Sample Rate: 44.1kHz
+- Bit Rate: 128 kbps
+- Volume: Normalized (not too loud or too soft)
+
+The sound will play automatically when a new message arrives in any group.

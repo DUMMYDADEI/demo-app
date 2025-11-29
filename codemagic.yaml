@@ -1,0 +1,53 @@
+workflows:
+  build-capacitor:
+    name: Build Capacitor Android (with Firebase files)
+    environment:
+      vars:
+        NODE_VERSION: "18"
+    scripts:
+      - name: Setup Node
+        script: |
+          nvm install $NODE_VERSION
+          nvm use $NODE_VERSION
+
+      - name: Install deps & build web
+        script: |
+          npm ci
+          npm run build
+
+      - name: Install Capacitor & sync native
+        script: |
+          npm i @capacitor/cli @capacitor/core --no-save
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Write Firebase files (decode from base64)
+        script: |
+          mkdir -p android/app
+          if [ ! -z "$ANDROID_GOOGLE_SERVICES_BASE64" ]; then
+            echo "$ANDROID_GOOGLE_SERVICES_BASE64" | base64 --decode > android/app/google-services.json
+            echo "Wrote android/app/google-services.json"
+          else
+            echo "ANDROID_GOOGLE_SERVICES_BASE64 not set"
+            exit 1
+          fi
+
+          if [ ! -z "$IOS_GOOGLE_SERVICES_BASE64" ]; then
+            mkdir -p ios/App
+            echo "$IOS_GOOGLE_SERVICES_BASE64" | base64 --decode > ios/App/GoogleService-Info.plist
+            echo "Wrote ios/App/GoogleService-Info.plist"
+          fi
+
+          if [ ! -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ]; then
+            echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > firebase-service-account.json
+            echo "Wrote firebase-service-account.json"
+          fi
+
+      - name: Android build
+        script: |
+          cd android
+          ./gradlew assembleRelease -x lint
+
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk

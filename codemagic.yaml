@@ -4,16 +4,19 @@ workflows:
     environment:
       vars:
         NODE_VERSION: "18"
-        BUILD_TYPE: "debug"
+        BUILD_TYPE: "debug"  # change to 'release' in Codemagic UI when needed
+
     scripts:
+
       - name: Setup Node
         script: |
           if command -v node >/dev/null 2>&1; then
             echo "Node found: $(node -v)"
           else
+            echo "Installing Node 18..."
             curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
             sudo apt-get install -y nodejs
-            node -v
+            echo "Installed Node: $(node -v)"
           fi
 
       - name: Install deps & build web
@@ -21,7 +24,7 @@ workflows:
           npm ci
           npm run build
 
-      - name: Capacitor sync
+      - name: Install Capacitor & sync native
         script: |
           npm i @capacitor/cli @capacitor/core --no-save
           npx cap add android || true
@@ -31,28 +34,34 @@ workflows:
         script: |
           mkdir -p android/app
           echo "$ANDROID_GOOGLE_SERVICES_BASE64" | base64 --decode > android/app/google-services.json
+          echo "Firebase google-services.json written"
 
       - name: Prepare Android keystore (optional)
         script: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Decoding keystore..."
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/my-release-key.jks
 
+            echo "Writing gradle.properties..."
             cat <<EOF > android/gradle.properties
 KEYSTORE_FILE=my-release-key.jks
 KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD
 KEY_ALIAS=$ANDROID_KEY_ALIAS
 KEY_PASSWORD=$ANDROID_KEY_PASSWORD
 EOF
+            echo "Keystore + gradle.properties created"
           else
-            echo "No keystore provided. Debug build will still work."
+            echo "No keystore provided (debug build OK)"
           fi
 
       - name: Android build
         script: |
           cd android
           if [ "$BUILD_TYPE" = "release" ]; then
+            echo "Building RELEASE..."
             ./gradlew assembleRelease -x lint
           else
+            echo "Building DEBUG..."
             ./gradlew assembleDebug -x lint
           fi
 

@@ -4,99 +4,58 @@ workflows:
     environment:
       vars:
         NODE_VERSION: "18"
-        BUILD_TYPE: "debug" # change to 'release' in Codemagic env to build release
+        BUILD_TYPE: "debug"
     scripts:
-      - name: Setup Node (use system or install Node 18)
+      - name: Setup Node
         script: |
-          echo "Checking node..."
           if command -v node >/dev/null 2>&1; then
             echo "Node found: $(node -v)"
-            echo "npm found: $(npm -v || echo 'npm not found')"
           else
-            echo "Node not found — installing Node 18 via NodeSource"
             curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-            sudo apt-get update
             sudo apt-get install -y nodejs
-            echo "Installed Node: $(node -v)"
-            echo "Installed npm: $(npm -v)"
+            node -v
           fi
 
       - name: Install deps & build web
         script: |
-          echo "Installing node modules..."
           npm ci
-          echo "Building web assets (npm run build)..."
           npm run build
 
-      - name: Install Capacitor & sync native
+      - name: Capacitor sync
         script: |
-          echo "Installing Capacitor CLI/core (no-save) and syncing..."
           npm i @capacitor/cli @capacitor/core --no-save
-          # Ensure android platform exists; if already present the command will exit non-zero so || true
           npx cap add android || true
           npx cap sync android
 
-      - name: Write Firebase files (decode from base64)
+      - name: Write Firebase files
         script: |
-          echo "Writing Firebase files from environment variables..."
           mkdir -p android/app
-          if [ -n "$ANDROID_GOOGLE_SERVICES_BASE64" ]; then
-            echo "$ANDROID_GOOGLE_SERVICES_BASE64" | base64 --decode > android/app/google-services.json
-            echo "Wrote android/app/google-services.json"
-          else
-            echo "ERROR: ANDROID_GOOGLE_SERVICES_BASE64 not set"
-            exit 1
-          fi
-
-          if [ -n "$IOS_GOOGLE_SERVICES_BASE64" ]; then
-            mkdir -p ios/App
-            echo "$IOS_GOOGLE_SERVICES_BASE64" | base64 --decode > ios/App/GoogleService-Info.plist
-            echo "Wrote ios/App/GoogleService-Info.plist"
-          fi
-
-          if [ -n "$FIREBASE_SERVICE_ACCOUNT_BASE64" ]; then
-            echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > firebase-service-account.json
-            echo "Wrote firebase-service-account.json"
-          fi
+          echo "$ANDROID_GOOGLE_SERVICES_BASE64" | base64 --decode > android/app/google-services.json
 
       - name: Prepare Android keystore (optional)
         script: |
-          # If a keystore was supplied as base64, decode it and set Gradle properties
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "Decoding Android keystore..."
-            mkdir -p android/app
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/my-release-key.jks
-            echo "Decoded keystore to android/app/my-release-key.jks"
-            # create a gradle.properties file local to the android folder to be used by signingConfig
-            cat > android/gradle.properties <<EOF
+
+            cat <<EOF > android/gradle.properties
 KEYSTORE_FILE=my-release-key.jks
 KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD
 KEY_ALIAS=$ANDROID_KEY_ALIAS
 KEY_PASSWORD=$ANDROID_KEY_PASSWORD
 EOF
-            echo "Wrote android/gradle.properties with keystore references (keystore file is in android/app/)"
           else
-            echo "No ANDROID_KEYSTORE_BASE64 provided — release builds may fail if signing is required"
+            echo "No keystore provided. Debug build will still work."
           fi
 
-      - name: Android build (debug or release)
+      - name: Android build
         script: |
-          cd android || exit 1
-          ./gradlew --no-daemon clean
-          if [ "${BUILD_TYPE:-debug}" = "release" ]; then
-            echo "Building RELEASE variant (assembleRelease)..."
+          cd android
+          if [ "$BUILD_TYPE" = "release" ]; then
             ./gradlew assembleRelease -x lint
           else
-            echo "Building DEBUG variant (assembleDebug)..."
             ./gradlew assembleDebug -x lint
           fi
 
     artifacts:
-      - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
-
-    publishing:
-      # Optional: Codemagic integrations (e.g. Firebase App Distribution) can be added if desired.
-      # Example (requires FIREBASE_SERVICE_ACCOUNT_BASE64 to be present and configured in UI):
-      # firebase_app_distribution:
-      #   service_account: FIREBASE_SERVICE_ACCOUNT_BASE64
+      - android/app/build/outputs/**/*.aab
